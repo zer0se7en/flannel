@@ -22,8 +22,8 @@ import (
 
 	"fmt"
 
-	"github.com/coreos/flannel/backend"
-	"github.com/coreos/flannel/subnet"
+	"github.com/flannel-io/flannel/backend"
+	"github.com/flannel-io/flannel/subnet"
 	log "k8s.io/klog"
 )
 
@@ -61,11 +61,12 @@ func (n *network) Run(ctx context.Context) {
 
 	for {
 		select {
-		case evtBatch := <-evts:
+		case evtBatch, ok := <-evts:
+			if !ok {
+				log.Infof("evts chan closed")
+				return
+			}
 			n.handleSubnetEvents(evtBatch)
-
-		case <-ctx.Done():
-			return
 		}
 	}
 }

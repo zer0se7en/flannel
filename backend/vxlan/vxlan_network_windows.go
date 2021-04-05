@@ -23,9 +23,9 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Microsoft/hcsshim/hcn"
-	"github.com/coreos/flannel/backend"
-	"github.com/coreos/flannel/pkg/ip"
-	"github.com/coreos/flannel/subnet"
+	"github.com/flannel-io/flannel/backend"
+	"github.com/flannel-io/flannel/pkg/ip"
+	"github.com/flannel-io/flannel/subnet"
 	log "k8s.io/klog"
 )
 
@@ -73,11 +73,12 @@ func (nw *network) Run(ctx context.Context) {
 
 	for {
 		select {
-		case evtBatch := <-events:
+		case evtBatch, ok := <-events:
+			if !ok {
+				log.Infof("evts chan closed")
+				return
+			}
 			nw.handleSubnetEvents(evtBatch)
-
-		case <-ctx.Done():
-			return
 		}
 	}
 }

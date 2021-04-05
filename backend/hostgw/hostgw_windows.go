@@ -21,10 +21,10 @@ import (
 	"time"
 
 	"github.com/Microsoft/hcsshim"
-	"github.com/coreos/flannel/backend"
-	"github.com/coreos/flannel/pkg/ip"
-	"github.com/coreos/flannel/pkg/routing"
-	"github.com/coreos/flannel/subnet"
+	"github.com/flannel-io/flannel/backend"
+	"github.com/flannel-io/flannel/pkg/ip"
+	"github.com/flannel-io/flannel/pkg/routing"
+	"github.com/flannel-io/flannel/subnet"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -159,11 +159,16 @@ func (be *HostgwBackend) RegisterNetwork(ctx context.Context, wg *sync.WaitGroup
 
 		// Wait for the network to populate Management IP
 		log.Infof("Waiting to get ManagementIP from HNSNetwork %s", networkName)
+		var newNetworkID = newNetwork.Id
 		waitErr = wait.Poll(500*time.Millisecond, 30*time.Second, func() (done bool, err error) {
-			newNetwork, lastErr = hcsshim.HNSNetworkRequest("GET", newNetwork.Id, "")
+			newNetwork, lastErr = hcsshim.HNSNetworkRequest("GET", newNetworkID, "")
 			return newNetwork != nil && len(newNetwork.ManagementIP) != 0, nil
 		})
 		if waitErr == wait.ErrWaitTimeout {
+			// Do not swallow the root cause
+			if lastErr != nil {
+				waitErr = lastErr
+			}
 			return nil, errors.Wrapf(waitErr, "timeout, failed to get management IP from HNSNetwork %s", networkName)
 		}
 
@@ -226,7 +231,7 @@ func (be *HostgwBackend) RegisterNetwork(ctx context.Context, wg *sync.WaitGroup
 		if lastErr == nil {
 			return true, nil
 		}
-		// See https://github.com/coreos/flannel/issues/1391 and
+		// See https://github.com/flannel-io/flannel/issues/1391 and
 		// hcsshim lacks some validations to detect the error, so we judge it by error message.
 		if strings.Contains(lastErr.Error(), "This endpoint is already attached to the switch.") {
 			return true, nil

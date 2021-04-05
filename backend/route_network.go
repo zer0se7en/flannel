@@ -24,7 +24,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/coreos/flannel/subnet"
+	"github.com/flannel-io/flannel/subnet"
 	"github.com/vishvananda/netlink"
 	log "k8s.io/klog"
 )
@@ -69,11 +69,12 @@ func (n *RouteNetwork) Run(ctx context.Context) {
 
 	for {
 		select {
-		case evtBatch := <-evts:
+		case evtBatch, ok := <-evts:
+			if !ok {
+				log.Infof("evts chan closed")
+				return
+			}
 			n.handleSubnetEvents(evtBatch)
-
-		case <-ctx.Done():
-			return
 		}
 	}
 }
